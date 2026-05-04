@@ -126,3 +126,29 @@ def save_model(model, optimizer, epochs_trained: int, learning_rate: float, trai
         'note': note
     }
     torch.save(save_data, save_file_path)
+
+def save_onnx_model(model, output_file_name):
+    """
+        Accepts a model that is on the cpu and produces a .onnx file that can be loaded and used
+        for inference later.
+
+        Args:
+            model(torch model): A pytorch model that is on the cpu.
+            output_file_name(str): Where the file will be saved to and the name of the file. 
+                                    Don't forget to include .onnx at the end of the file name.
+    """
+    dummy_input = torch.randn(1, 3, 224, 224)
+    torch.onnx.export(
+        model,
+        dummy_input,
+        output_file_name,
+        export_params=True,
+        opset_version=25,
+        do_constant_folding=True,
+        input_names=['images'],
+        output_names=['predictions'],
+        dynamic_axes={
+            'images': {0: 'batch_size'},
+            'predictions': {0: 'batch_size'}
+        }
+    )
