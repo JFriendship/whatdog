@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from api.v1.routes import api_router
-from data_pipeline import load_imagefolder_dataset, clean_label_mapping
+from app.ml.data_pipeline import load_imagefolder_dataset, clean_label_mapping
 import onnxruntime as ort
 import os
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, Request
 from PIL import Image
 import io
 from schemas.prediction import PredictionResponse
-from data_pipeline import get_transformations
+from app.ml.data_pipeline import get_transformations
 import numpy as np
 
 router = APIRouter()

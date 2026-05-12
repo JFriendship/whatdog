@@ -1,8 +1,8 @@
 import torch
 import torchvision.models as models
 from PIL import Image
-from data_pipeline import get_transformations, load_imagefolder_dataset, clean_label_mapping
-from model_pipeline import load_and_finetune_resnet18
+from app.ml.data_pipeline import get_transformations, load_imagefolder_dataset, clean_label_mapping
+from app.ml.model_pipeline import load_and_finetune_resnet18
 import os
 
 def model_inference(image, device="cpu"):
