@@ -1,20 +1,16 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from api.v1.routes import api_router
-from ml.data_pipeline import load_imagefolder_dataset, clean_label_mapping
+from ml.model_inference import get_hardcoded_dataset_labels
 import onnxruntime as ort
-import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Loading ONNX Model...")
-    onnx_model_file_path = "trained_models/res18_SGD_model.onnx"
+    onnx_model_file_path = "app/ml/res18_SGD_model.onnx"
     app.state.onnx_session = ort.InferenceSession(onnx_model_file_path)
     print("Loading Index to Class Mapping...")
-    current_dir = os.getcwd()
-    root_dir = current_dir + "/Images"
-    dataset = load_imagefolder_dataset(root_dir=root_dir)
-    app.state.idx_to_class = clean_label_mapping(dataset=dataset)
+    app.state.idx_to_class = get_hardcoded_dataset_labels()
 
     yield
 
