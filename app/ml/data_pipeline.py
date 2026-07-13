@@ -19,10 +19,10 @@ def load_imagefolder_dataset(root_dir: str, transform=None):
         ImageFolder: the image folder dataset created from the provided directory.
     """
 
-    image_folder_dataset = datasets.ImageFolder(root=root_dir, transform=None)
+    image_folder_dataset = datasets.ImageFolder(root=root_dir, transform=transform)
     return image_folder_dataset
 
-def split_dataset(dataset, train_percentage: float = 0.7, val_percentage: float = 0.15, seed: int = 24):
+def split_dataset(dataset: Dataset, train_percentage: float = 0.7, val_percentage: float = 0.15, seed: int = 24):
     """
     Splits the dataset into train/test splits
     Args:
@@ -36,23 +36,15 @@ def split_dataset(dataset, train_percentage: float = 0.7, val_percentage: float 
         test_dataset (Subset): The portion of the dataset for testing.   
     """
 
-    # Type Checks
-    if not isinstance(train_percentage, float) or not isinstance(val_percentage, float):
-        print("TYPE ERROR: train_percentage and val_percentage have to be floats.")
-        return None, None, None
-    
-    if not isinstance(seed, int):
-        print("TYPE ERROR: seed has to be an int.")
-        return None, None, None
-
     # Value Checks
-    if (train_percentage + val_percentage > 1.0 or 
-        train_percentage <= 0.0 or 
-        val_percentage <= 0.0):
-        print("===== Value Error =====")
-        print("train_percentage must be within (0,1]")
-        print("val_percentage must be between (0,1]")
-        print("train_percentage + val_percentage must be <= 1.0")
+    if train_percentage + val_percentage > 1.0:
+        raise ValueError("train_percentage + val_percentage must be <= 1.0")
+
+    if 0.0 >= train_percentage > 1.0:
+        raise ValueError("train_percentage must be within (0,1]")
+
+    if 0.0 >= val_percentage > 1.0:
+        raise ValueError("val_percentage must be between (0,1]")
 
     # Use a generator for reproducability
     generator = torch.Generator().manual_seed(seed)
@@ -71,7 +63,10 @@ def split_dataset(dataset, train_percentage: float = 0.7, val_percentage: float 
 
     return train_dataset, val_dataset, test_dataset
 
-def get_transformations(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
+
+def get_transformations(
+    mean: list[float] = [0.485, 0.456, 0.406], std: list[float] = [0.229, 0.224, 0.225]
+):
     """
     Returns the transformations for the train/test set. 
     The data will be normalized based on the mean and standard deviation of the Imagenet1k dataset by default.
@@ -82,13 +77,9 @@ def get_transformations(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
         train_transform (Compose): The torchvision transformations for the train dataset.  
         test_val_transform (Compose): The torchvision transformations for the validation and test datasets.  
     """
-    if not isinstance(mean, list) or not isinstance(std, list):
-        print("both mean and std have to be lists.")
-        return None, None
-
-    if not len(mean) == 3 or not len(std) == 3:
-        print("mean and std must both have a length of 3.")
-        return None, None
+    if len(mean) != 3 or len(std) != 3:
+        raise ValueError("Mean and std must both have a length of 3")
+    
 
     train_transform = transforms.Compose([
         transforms.Resize(size=(256, 256)),
@@ -113,8 +104,16 @@ def get_transformations(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
 
     return train_transform, test_val_transform
 
-def create_dataloaders(train_dataset, val_dataset, test_dataset, train_batch_size: int=32,
-                       val_batch_size: int=64, test_batch_size: int=64, train_shuffle: bool=True):
+
+def create_dataloaders(
+    train_dataset: Dataset,
+    val_dataset: Dataset,
+    test_dataset: Dataset,
+    train_batch_size: int = 32,
+    val_batch_size: int = 64,
+    test_batch_size: int = 64,
+    train_shuffle: bool = True
+):
     """
     Creates pytorch DataLoaders for the provided train/val/test datasets.
     Args:
@@ -137,7 +136,8 @@ def create_dataloaders(train_dataset, val_dataset, test_dataset, train_batch_siz
 
     return train_loader, val_loader, test_loader
 
-def load_one_image(dataloader):
+
+def load_one_image(dataloader: DataLoader):
     """
     Loads one image from the provided DataLoader. Best used with a dataloader that shuffles.
     Args:
@@ -165,7 +165,7 @@ def load_one_image(dataloader):
 
     return label
 
-def clean_label_mapping(dataset):
+def clean_label_mapping(dataset: Dataset):
     """
     Cleans the class folder names in the label:index mapping provided by PyTorch Datasets.
     Args:
@@ -222,4 +222,3 @@ class TransformedSubset(Dataset):
             image = self.transform(image)
 
         return image, label
-    
