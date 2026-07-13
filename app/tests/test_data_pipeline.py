@@ -62,12 +62,3 @@ def test_get_transformations_breaks():
     mean, std = [0.5, 0.5], [0.5, 0.5, 0.5, 0.5]
     with pytest.raises(ValueError):
         dp.get_transformations(mean=mean, std=std)
-
-# def test_create_dataloaders():
-#     pass
-
-# def test_load_one_image():
-#     pass
-
-# def test_clean_label_mapping():
-#     pass
