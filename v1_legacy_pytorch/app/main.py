@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from api.v1.routes import api_router
-from ml.model_inference import get_hardcoded_dataset_labels
+from app.api.v1.routes import api_router
+from app.ml.model_inference import get_hardcoded_dataset_labels
 import onnxruntime as ort
 import os
 from pathlib import Path

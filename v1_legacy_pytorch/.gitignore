@@ -1,0 +1,6 @@
+/Images/
+.DS_Store
+**/__pycache__/
+/trained_models
+*.onnx
+*.onnx.data
