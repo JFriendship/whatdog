@@ -1,1 +1,1 @@
-from .data_ingestion import CroppedStanfordDogsDataset
+from .data_ingestion import CroppedStanfordDogsDataset, WhatdogDataModule

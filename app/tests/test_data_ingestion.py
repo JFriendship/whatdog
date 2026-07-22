@@ -6,7 +6,8 @@ from PIL import Image
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
-from training import CroppedStanfordDogsDataset
+from training import CroppedStanfordDogsDataset, WhatdogDataModule
+from torch.utils.data.sampler import RandomSampler, SequentialSampler
 
 @pytest.fixture
 def mock_stanford_dogs_dir(tmp_path):
@@ -137,3 +138,83 @@ def test_dataloader_batching_compatibility(mock_stanford_dogs_dir):
     
     assert images_batch.shape == (1, 3, 224, 224), "Batch tensor shape must match (B, C, H, W)."
     assert labels_batch.shape == (1,), "Target labels batch shape must match (B,)."
+
+
+# =============================
+# LIGHTNING DATA MODULE TESTING
+# =============================
+
+def test_datamodule_split_proportions(mocker):
+    """
+    Verifies that the 70/15/15 split math calculates correctly using mocker.
+    """
+    mock_dataset_class = mocker.patch("training.data_ingestion.CroppedStanfordDogsDataset")
+    
+    mock_instance = mock_dataset_class.return_value
+    mock_instance.__len__.return_value = 100
+
+    module_instance = WhatdogDataModule(
+        images_dir="dummy/Images",
+        annotations_dir="dummy/Annotations",
+        batch_size=16,
+        num_workers=0
+    )
+    module_instance.setup()
+
+    assert len(module_instance.train_data) == 70, "Train split should be exactly 70%."
+    assert len(module_instance.val_data) == 15, "Validation split should be exactly 15%."
+    assert len(module_instance.test_data) == 15, "Test split should contain the remainder."
+
+
+def test_no_data_leakage(mocker):
+    """
+    Verifies that no single image index exists in more than one subset using mocker.
+    """
+    mock_dataset_class = mocker.patch("training.data_ingestion.CroppedStanfordDogsDataset")
+    mock_instance = mock_dataset_class.return_value
+    mock_instance.__len__.return_value = 1000
+
+    module_instance = WhatdogDataModule(
+        images_dir="dummy/Images",
+        annotations_dir="dummy/Annotations",
+        batch_size=16,
+        num_workers=0
+    )
+    module_instance.setup()
+
+    train_indices = set(module_instance.train_data.indices)
+    val_indices = set(module_instance.val_data.indices)
+    test_indices = set(module_instance.test_data.indices)
+
+    assert train_indices.isdisjoint(val_indices), "Leakage: Train and Val sets share images!"
+    assert train_indices.isdisjoint(test_indices), "Leakage: Train and Test sets share images!"
+    assert val_indices.isdisjoint(test_indices), "Leakage: Val and Test sets share images!"
+
+
+def test_dataloader_configuration(mocker):
+    """
+    Verifies DataLoaders are configured correctly and only training is shuffled using mocker.
+    """
+    mock_dataset_class = mocker.patch("training.data_ingestion.CroppedStanfordDogsDataset")
+    mock_instance = mock_dataset_class.return_value
+    mock_instance.__len__.return_value = 100
+
+    module_instance = WhatdogDataModule(
+        images_dir="dummy/Images",
+        annotations_dir="dummy/Annotations",
+        batch_size=16,
+        num_workers=0
+    )
+    module_instance.setup()
+
+    train_loader = module_instance.train_dataloader()
+    val_loader = module_instance.val_dataloader()
+    test_loader = module_instance.test_dataloader()
+
+    assert train_loader.batch_size == 16
+    assert val_loader.batch_size == 16
+    assert test_loader.batch_size == 16
+
+    assert isinstance(train_loader.sampler, RandomSampler), "Train loader MUST be shuffled."
+    assert isinstance(val_loader.sampler, SequentialSampler), "Validation loader MUST NOT be shuffled."
+    assert isinstance(test_loader.sampler, SequentialSampler), "Test loader MUST NOT be shuffled."
