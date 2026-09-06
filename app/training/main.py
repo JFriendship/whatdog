@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import CSVLogger
 
 
 def parse_args():
@@ -43,6 +44,8 @@ def main():
         auto_insert_metric_name=False
     )
 
+    logger = CSVLogger(save_dir=args.output_dir, name="training_logs")
+
     data_module = WhatdogDataModule(
         images_dir=str(args.images_dir), 
         annotations_dir=str(args.annotations_dir),
@@ -57,6 +60,7 @@ def main():
         accelerator=args.accelerator, 
         devices="auto", 
         callbacks=[checkpoint_callback],
+        logger=logger,
         log_every_n_steps=10,
         default_root_dir=str(args.output_dir),
         deterministic=True
