@@ -1,18 +1,20 @@
-from data_ingestion import WhatdogDataModule
-from model import WhatdogResNet18
+from .data_ingestion import WhatdogDataModule
+from .model import WhatdogResNet18
 import argparse
 from pathlib import Path
 import lightning as L
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 
 def parse_args():
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    TRAINING_DIR = Path(__file__).resolve().parent
 
     parser = argparse.ArgumentParser(description="Whatdog Training")
 
     parser.add_argument("--images-dir", type=Path, default=PROJECT_ROOT / "data" / "Images")
     parser.add_argument("--annotations-dir", type=Path, default=PROJECT_ROOT / "data" / "Annotation")
-    parser.add_argument("--output-dir", type=Path, default=Path("artifacts"))
+    parser.add_argument("--output-dir", type=Path, default=TRAINING_DIR / "artifacts")
 
     parser.add_argument("--num_classes", type=int, default=120)
     parser.add_argument("--batch-size", type=int, default=32)
@@ -31,6 +33,16 @@ def main():
     L.seed_everything(args.seed, workers=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=args.output_dir / "checkpoints",
+        filename="whatdog-{epoch:02d}-{val_loss:.4f}",
+        monitor="val_loss",
+        mode="min",
+        save_top_k=1,
+        save_last=True,
+        auto_insert_metric_name=False
+    )
+
     data_module = WhatdogDataModule(
         images_dir=str(args.images_dir), 
         annotations_dir=str(args.annotations_dir),
@@ -44,6 +56,7 @@ def main():
         max_epochs=args.max_epochs,
         accelerator=args.accelerator, 
         devices="auto", 
+        callbacks=[checkpoint_callback],
         log_every_n_steps=10,
         default_root_dir=str(args.output_dir),
         deterministic=True
