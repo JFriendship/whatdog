@@ -26,6 +26,8 @@ def parse_args():
 
     parser.add_argument("--accelerator", choices=["auto", "cpu", "mps", "gpu"], default="auto")
 
+    parser.add_argument("--resume-from", type=Path)
+
     return parser.parse_args()
 
 def main():
@@ -66,7 +68,7 @@ def main():
         deterministic=True
     )
 
-    trainer.fit(model, datamodule=data_module)
+    trainer.fit(model, datamodule=data_module, ckpt_path=args.resume_from if args.resume_from else None)
 
 if __name__ == "__main__":
     main()
