@@ -21,6 +21,15 @@ class CroppedStanfordDogsDataset(Dataset):
         self.transform = transform
         self.samples = self._build_dataset()
 
+        # Sorts data folder names and cleans them
+        breeds = sorted(
+            folder_name 
+            for folder_name in os.listdir(self.images_dir)
+            if os.path.isdir(os.path.join(self.images_dir, folder_name))
+        )
+
+        self.class_names = [folder_name.split("-", maxsplit=1)[-1].replace("_", " ") for folder_name in breeds]
+
     def _build_dataset(self):
         """Builds a list mapping image paths to their corresponding XML paths and labels."""
 
@@ -135,6 +144,9 @@ class WhatdogDataModule(L.LightningDataModule):
             annotations_dir=self.annotations_dir, 
             transform=self.test_val_transform
         )
+
+        self.class_names = full_train_dataset.class_names
+
         # Split dataset
         total_dataset_size = len(full_train_dataset)
         train_size = int(total_dataset_size * 0.7)

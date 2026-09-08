@@ -1,6 +1,7 @@
 from .data_ingestion import WhatdogDataModule
 from .model import WhatdogResNet18
 import argparse
+import json
 from pathlib import Path
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -54,6 +55,11 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers
     )
+
+    data_module.setup(stage="fit")  # Had to call this manually to get the class names for predictions
+
+    labels_path = args.output_dir / "class_names.json"
+    labels_path.write_text(json.dumps(data_module.class_names, indent=2), encoding="utf-8")
 
     model = WhatdogResNet18(num_classes=args.num_classes, learning_rate=args.learning_rate)
 
