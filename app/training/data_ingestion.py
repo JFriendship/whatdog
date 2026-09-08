@@ -2,14 +2,34 @@ from PIL import Image
 import xml.etree.ElementTree as ET
 from torch.utils.data import Dataset
 import os
+from collections.abc import Callable
+from typing import TypedDict
 
 import lightning as L
 import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader, Subset
 
-class CroppedStanfordDogsDataset(Dataset):
-    def __init__(self, images_dir: str, annotations_dir: str, transform=None):
+# Helper aliases and annotations for type hints
+PathType = str | os.PathLike[str]
+ImageTransform = Callable[[Image.Image], Image.Image | torch.Tensor]
+DatasetItem = tuple[Image.Image | torch.Tensor, int]
+BoundingBox = tuple[int, int, int, int]
+
+
+class Sample(TypedDict):
+    image_path: str
+    xml_path: str
+    label: int
+
+
+class CroppedStanfordDogsDataset(Dataset[DatasetItem]):
+    def __init__(
+        self,
+        images_dir: PathType,
+        annotations_dir: PathType,
+        transform: ImageTransform | None = None,
+    ) -> None:
         """
         Args:
             images_dir: Path to the folder containing the stanford dogs images
@@ -30,7 +50,7 @@ class CroppedStanfordDogsDataset(Dataset):
 
         self.class_names = [folder_name.split("-", maxsplit=1)[-1].replace("_", " ") for folder_name in breeds]
 
-    def _build_dataset(self):
+    def _build_dataset(self) -> list[Sample]:
         """Builds a list mapping image paths to their corresponding XML paths and labels."""
 
         samples = []
@@ -61,7 +81,7 @@ class CroppedStanfordDogsDataset(Dataset):
 
         return samples
 
-    def _get_bounding_box(self, xml_path):
+    def _get_bounding_box(self, xml_path: PathType) -> BoundingBox:
         """Parses the XML file to find the bounding box coordinates."""
 
         tree = ET.parse(xml_path)
@@ -77,10 +97,10 @@ class CroppedStanfordDogsDataset(Dataset):
 
         return (xmin, ymin, xmax, ymax)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.samples)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> DatasetItem:
         sample = self.samples[idx]
 
         # 1. Load the image using PIL
@@ -96,10 +116,16 @@ class CroppedStanfordDogsDataset(Dataset):
             image = self.transform(image)
 
         return image, sample['label'] 
-    
+
 
 class WhatdogDataModule(L.LightningDataModule):
-    def __init__(self, images_dir: str = "./data/Images", annotations_dir: str = "./data/Annotation", batch_size: int = 32, num_workers: int = 2):
+    def __init__(
+        self,
+        images_dir: PathType = "./data/Images",
+        annotations_dir: PathType = "./data/Annotation",
+        batch_size: int = 32,
+        num_workers: int = 2,
+    ) -> None:
         super().__init__()
         self.images_dir = images_dir
         self.annotations_dir = annotations_dir
@@ -132,7 +158,7 @@ class WhatdogDataModule(L.LightningDataModule):
             self.normalize
         ])
 
-    def setup(self, stage: str = None):
+    def setup(self, stage: str | None = None) -> None:
         # Load dataset
         full_train_dataset = CroppedStanfordDogsDataset(
             images_dir=self.images_dir, 
@@ -162,7 +188,7 @@ class WhatdogDataModule(L.LightningDataModule):
         self.val_data = Subset(full_test_val_dataset, indices[train_size:train_size+val_size])
         self.test_data = Subset(full_test_val_dataset, indices[train_size+val_size:])
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader[DatasetItem]:
         return DataLoader(
             dataset=self.train_data, 
             batch_size=self.batch_size, 
@@ -170,15 +196,15 @@ class WhatdogDataModule(L.LightningDataModule):
             num_workers=self.num_workers
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> DataLoader[DatasetItem]:
         return DataLoader(
             dataset=self.val_data,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers
         )
-    
-    def test_dataloader(self):
+
+    def test_dataloader(self) -> DataLoader[DatasetItem]:
         return DataLoader(
             dataset=self.test_data,
             batch_size=self.batch_size,
