@@ -84,18 +84,28 @@ class CroppedStanfordDogsDataset(Dataset[DatasetItem]):
     def _get_bounding_box(self, xml_path: PathType) -> BoundingBox:
         """Parses the XML file to find the bounding box coordinates."""
 
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
+        root = ET.parse(xml_path).getroot()
 
-        # Grab the first bounding box found in the XML
-        bndbox = root.find('object').find('bndbox')
+        root_object = root.find("object")
+        if root_object is None:
+            raise ValueError(f"<object> not found in {xml_path}")
+        
+        bounding_box = root_object.find("bndbox")
+        if bounding_box is None:
+            raise ValueError(f"<bndbox> not found in {xml_path}")
 
-        xmin = int(bndbox.find('xmin').text)
-        ymin = int(bndbox.find('ymin').text)
-        xmax = int(bndbox.find('xmax').text)
-        ymax = int(bndbox.find('ymax').text)
+        def coordinate(name: str) -> int:
+            element = bounding_box.find(name)
+            if element is None or element.text is None:
+                raise ValueError(f"Missing <{name}> in {xml_path}")
+            return int(element.text)
 
-        return (xmin, ymin, xmax, ymax)
+        return (
+            coordinate("xmin"),
+            coordinate("ymin"),
+            coordinate("xmax"),
+            coordinate("ymax"),
+        )
 
     def __len__(self) -> int:
         return len(self.samples)
