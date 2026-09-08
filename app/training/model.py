@@ -17,6 +17,8 @@ class WhatdogResNet18(L.LightningModule):
 
         self.save_hyperparameters(ignore=["weights"])
 
+        self.learning_rate = learning_rate
+
         # Load pretrained ResNet18
         self.model = models.resnet18(weights=weights)
 
@@ -25,11 +27,11 @@ class WhatdogResNet18(L.LightningModule):
             param.requires_grad = False
 
         # Update the final classification layer (updatable parameters)
-        self.model.fc = nn.Linear(self.model.fc.in_features, self.hparams.num_classes)
+        self.model.fc = nn.Linear(self.model.fc.in_features, num_classes)
 
-        self.train_acc = torchmetrics.Accuracy(task="multiclass", num_classes=self.hparams.num_classes)
-        self.val_acc = torchmetrics.Accuracy(task="multiclass", num_classes=self.hparams.num_classes)
-        self.test_acc = torchmetrics.Accuracy(task="multiclass", num_classes=self.hparams.num_classes)
+        self.train_acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
+        self.val_acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
+        self.test_acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
 
     def forward(self, x):
         return self.model(x)
@@ -70,6 +72,6 @@ class WhatdogResNet18(L.LightningModule):
         self.log("test_acc", self.test_acc, prog_bar=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.fc.parameters(), lr=self.hparams.learning_rate)
+        optimizer = torch.optim.Adam(self.model.fc.parameters(), lr=self.learning_rate)
 
         return optimizer
