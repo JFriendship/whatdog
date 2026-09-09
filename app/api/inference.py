@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from PIL import Image
+from sympy import Idx
 from torchvision import transforms
 
 import torch
@@ -28,10 +29,19 @@ class PyTorchInference():
         ])
 
     def predict(self, image: Image.Image, top_k: int = 3) -> list[dict]:
-        # Convert input image into input tensor and prep for inference
+        image_tensor = self.evaluation_transform(image.convert("RGB")).unsqueeze(0)
 
-        # run image through the model and get top_k predictions
+        with torch.inference_mode():
+            logits = self.model(image_tensor)
+            probabilities = torch.softmax(logits, dim=1)[0]
 
-        # return results (match pydantic schemas)
+        result_count = min(top_k, len(self.class_names))
+        scores, indices = torch.topk(input=probabilities, k=result_count)
 
-        pass
+        return [
+            {
+                "label": self.class_names[class_index],
+                "confidence": confidence
+            }
+            for confidence, class_index in zip(scores.tolist(), indices.tolist())
+        ]
