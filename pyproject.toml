@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+pythonpath = ["app"]
+testpaths = ["app/tests"]
+norecursedirs = ["*.egg", ".git", "v1_legacy_pytorch"]

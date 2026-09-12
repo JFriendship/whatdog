@@ -1,6 +1,5 @@
-/Images/
 .DS_Store
-**/__pycache__/
-/trained_models
-*.onnx
-*.onnx.data
+data/
+__pycache__/
+lightning_logs/
+artifacts/
