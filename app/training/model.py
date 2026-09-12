@@ -6,7 +6,6 @@ import torch.nn.functional as F
 import torchmetrics
 
 class WhatdogResNet18(L.LightningModule):
-
     def __init__(
         self,
         num_classes: int = 120,
