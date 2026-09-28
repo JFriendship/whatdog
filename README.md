@@ -10,6 +10,7 @@ Whatdog is a dog-breed classifier built with PyTorch Lightning and served throug
 - Saves the best and latest Lightning checkpoints during training
 - Exposes top-k predictions through a versioned REST API
 - Accepts JPEG and PNG uploads and validates invalid image data
+- Ships as a CPU-only, multi-stage Docker image for production inference
 
 ## Tech stack
 
@@ -19,6 +20,7 @@ Whatdog is a dog-breed classifier built with PyTorch Lightning and served throug
 - TorchMetrics
 - FastAPI and Pydantic
 - Pillow
+- Docker
 - pytest
 
 ## Getting started
@@ -137,6 +139,34 @@ Example response:
 ```
 
 Confidence values are softmax probabilities between 0 and 1. If fewer classes exist than requested by `top_k`, the API returns one result per available class.
+
+## Running with Docker
+
+The production image serves the API with CPU-only PyTorch. Before building it, train the model or otherwise provide both of the artifacts expected by the image:
+
+```text
+app/training/artifacts/
+├── checkpoints/
+│   └── last.ckpt
+└── class_names.json
+```
+
+From the repository root, build and run the image:
+
+```bash
+docker build -t whatdog:latest .
+docker run --rm --name whatdog-container -p 8000:8000 whatdog:latest
+```
+
+Once the model has loaded, verify the container is healthy:
+
+```bash
+curl http://localhost:8000/health
+```
+
+The API and interactive documentation are available at `http://localhost:8000/api/v2/predict` and `http://localhost:8000/docs`, respectively. Use the same request shown in [Make a prediction](#make-a-prediction) to classify an image.
+
+The multi-stage build installs only the production dependencies, copies only the application files and model artifacts allowed by `.dockerignore`, and runs the server as an unprivileged `appuser`. Because the checkpoint and class-name file are copied into the image, rebuild the image whenever either artifact changes.
 
 ## Testing
 
