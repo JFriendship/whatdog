@@ -177,5 +177,14 @@ def test_fast_dev_run():
     trainer.fit(model, train_dataloaders=loader, val_dataloaders=loader)
     test_results = trainer.test(model, dataloaders=loader)
 
-    assert len(test_results) == 1
-    assert {"test_loss", "test_acc"} <= test_results[0].keys()
+    assert (
+        len(test_results) == 1
+    ), f"The length of the test results: {len(test_results)} was not equal to 1"
+    assert {
+        "test_loss",
+        "test_acc_top_1",
+        "test_macro_f1",
+        "test_acc_top_3",
+        "test_acc_top_5",
+        "test_macro_recall",
+    } <= test_results[0].keys(), f"The test keys: {test_results[0].keys()}, did not match the model's test metrics."
