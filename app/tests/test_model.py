@@ -101,10 +101,42 @@ def test_training_step_calculates_loss_and_logs_metrics(
 
 
 @pytest.mark.parametrize(
-    ("step_name", "loss_name", "accuracy_name", "metric_attribute"),
+    (
+        "step_name",
+        "loss_name",
+        "accuracy_name",
+        "metric_attribute",
+        "expected_log_names",
+    ),
     [
-        ("validation_step", "val_loss", "val_acc", "val_acc"),
-        ("test_step", "test_loss", "test_acc", "test_acc"),
+        (
+            "validation_step",
+            "val_loss",
+            "val_acc_top_1",
+            "val_acc_top_1",
+            {
+                "val_loss",
+                "val_acc_top_1",
+                "val_acc_top_3",
+                "val_acc_top_5",
+                "val_macro_recall",
+                "val_macro_f1",
+            },
+        ),
+        (
+            "test_step",
+            "test_loss",
+            "test_acc_top_1",
+            "test_acc_top_1",
+            {
+                "test_loss",
+                "test_acc_top_1",
+                "test_acc_top_3",
+                "test_acc_top_5",
+                "test_macro_recall",
+                "test_macro_f1",
+            },
+        ),
     ],
 )
 def test_evaluation_step_calculates_loss_and_logs_metrics(
@@ -116,6 +148,7 @@ def test_evaluation_step_calculates_loss_and_logs_metrics(
     loss_name,
     accuracy_name,
     metric_attribute,
+    expected_log_names,
 ):
     """Verify validation and test loss, accuracy state, and logging."""
     mocker.patch.object(model, "forward", return_value=fixed_logits)
@@ -128,14 +161,25 @@ def test_evaluation_step_calculates_loss_and_logs_metrics(
     assert metric.compute().item() == pytest.approx(0.75)
 
     log_calls = {call.args[0]: call for call in log_mock.call_args_list}
-    assert log_calls.keys() == {loss_name, accuracy_name}
+    assert (
+        log_calls.keys() == expected_log_names
+    ), f"{log_calls.keys()} != {expected_log_names}"
     loss_call = log_calls[loss_name]
     torch.testing.assert_close(
         loss_call.args[1], F.cross_entropy(fixed_logits, dummy_batch[1])
     )
-    assert loss_call.kwargs == {"prog_bar": True}
-    assert log_calls[accuracy_name].args[1] is metric
-    assert log_calls[accuracy_name].kwargs == {"prog_bar": True}
+    assert loss_call.kwargs == {
+        "on_step": False,
+        "on_epoch": True,
+        "prog_bar": True,
+    }
+    logged_metric = log_calls[accuracy_name].args[1]
+    assert logged_metric is metric, f"{logged_metric} != {metric}"
+    assert log_calls[accuracy_name].kwargs == {
+        "on_step": False,
+        "on_epoch": True,
+        "prog_bar": True
+    }
 
 
 def test_optimizer_configuration(model):
@@ -177,5 +221,14 @@ def test_fast_dev_run():
     trainer.fit(model, train_dataloaders=loader, val_dataloaders=loader)
     test_results = trainer.test(model, dataloaders=loader)
 
-    assert len(test_results) == 1
-    assert {"test_loss", "test_acc"} <= test_results[0].keys()
+    assert (
+        len(test_results) == 1
+    ), f"The length of the test results: {len(test_results)} was not equal to 1"
+    assert {
+        "test_loss",
+        "test_acc_top_1",
+        "test_macro_f1",
+        "test_acc_top_3",
+        "test_acc_top_5",
+        "test_macro_recall",
+    } <= test_results[0].keys(), f"The test keys: {test_results[0].keys()}, did not match the model's test metrics."
