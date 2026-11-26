@@ -168,6 +168,15 @@ The API and interactive documentation are available at `http://localhost:8000/ap
 
 The multi-stage build installs only the production dependencies, copies only the application files and model artifacts allowed by `.dockerignore`, and runs the server as an unprivileged `appuser`. Because the checkpoint and class-name file are copied into the image, rebuild the image whenever either artifact changes.
 
+## Benchmarking inference
+From the repository root, run the PyTorch CPU benchmark with a trained checkpoint and a local image. It uses `app/training/artifacts/class_names.json` by default. If your matching class-name file is elsewhere, pass `--class_names_path`.
+```bash
+  python -m scripts.benchmark_inference \
+    --model-path app/training/artifacts/checkpoints/last.ckpt \
+    --image-path /path/to/dog.jpg
+```
+The benchmark loads the model and image once, runs 20 warmup predictions, then times 200 calls to `predict()` on the same image. It prints mean, median, 95th-percentile, and maximum latency in milliseconds. Use `--warmup-runs` and `--measured-runs` to change the run counts.
+
 ## Testing
 
 Run the test suite from the repository root:
