@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import torch
@@ -21,3 +22,19 @@ def save_checkpoint_to_onnx(checkpoint_path: Path, onnx_save_path: Path):
         output_names=["predictions"],
         dynamic_shapes={"images": {0: "batch_size"}, "predictions": {0: "batch_size"}},
     )
+
+
+def parse_args():
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+    parser = argparse.ArgumentParser(description="Whatdog Model Checkpoint to ONNX")
+
+    parser.add_argument(
+        "--checkpoint-path",
+        type=Path,
+    )
+    parser.add_argument(
+        "--onnx-save-path", type=Path, default=PROJECT_ROOT / "onnx_models"
+    )
+
+    return parser.parse_args()
