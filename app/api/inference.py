@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 from PIL import Image
-from sympy import Idx
 from torchvision import transforms
 
 import torch
