@@ -10,6 +10,8 @@ def save_checkpoint_to_onnx(checkpoint_path: Path, onnx_save_path: Path):
     model = WhatdogResNet18.load_from_checkpoint(
         checkpoint_path, weights=None, map_location="cpu"
     )
+    model.eval()
+    onnx_save_path.parent.mkdir(parents=True, exist_ok=True)
     dummy_input = torch.randn(1, 3, 224, 224)
     torch.onnx.export(
         model,
@@ -20,7 +22,7 @@ def save_checkpoint_to_onnx(checkpoint_path: Path, onnx_save_path: Path):
         do_constant_folding=True,
         input_names=["images"],
         output_names=["predictions"],
-        dynamic_shapes={"images": {0: "batch_size"}, "predictions": {0: "batch_size"}},
+        dynamic_shapes={},
     )
 
 
@@ -32,9 +34,24 @@ def parse_args():
     parser.add_argument(
         "--checkpoint-path",
         type=Path,
+        required=True,
     )
     parser.add_argument(
-        "--onnx-save-path", type=Path, default=PROJECT_ROOT / "onnx_models"
+        "--onnx-save-path",
+        type=Path,
+        default=PROJECT_ROOT / "onnx_models" / "model.onnx",
     )
 
     return parser.parse_args()
+
+
+def main():
+    print("===== SAVE MODEL CHECKPOINT TO ONNX =====")
+    args = parse_args()
+
+    save_checkpoint_to_onnx(args.checkpoint_path, args.onnx_save_path)
+    print(f"Checkpoint successfully saved as ONNX file")
+
+
+if __name__ == "__main__":
+    main()
